@@ -9,15 +9,21 @@ void GPIO_Init(){
 	GPIOA->MODER |= 0xA; //pin a0 a1
 	GPIOA->AFR[0] |= 0x88; // both pin as AF8
 
-	//I2C
+	//BUTTON
 	RCC->AHB2ENR |= 0x2;//enable pb clock
+	//enable pb13 user button
+	GPIOB->MODER &= ~(0x3<<26);//input
+	GPIOB->PUPDR |= GPIO_PUPDR_PUPD13_0;//pull up
+
+	//I2C
+	//RCC->AHB2ENR |= 0x2;//enable pb clock
 	GPIOB->MODER &= ~(0xF000);//pb6(scl) 7(sda)
 	GPIOB->MODER |= 0xA000;
-	GPIOB->OTYPER |= GPIO_OTYPER_OT6;
+	GPIOB->OTYPER |= GPIO_OTYPER_OT6;//open drain
 	GPIOB->OTYPER |= GPIO_OTYPER_OT7;
-	GPIOB->OSPEEDR |= GPIO_OSPEEDR_OSPEED6;
+	GPIOB->OSPEEDR |= GPIO_OSPEEDR_OSPEED6;//very high speed
 	GPIOB->OSPEEDR |= GPIO_OSPEEDR_OSPEED7;
-	GPIOB->PUPDR |= GPIO_PUPDR_PUPD6_0;
+	GPIOB->PUPDR |= GPIO_PUPDR_PUPD6_0;//pull up
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPD7_0;
 	GPIOB->AFR[0] |= 0x44000000; // both pin as AF4
 }
@@ -123,32 +129,49 @@ int main(){
 	GPIO_Init();
 	I2C1_Init();
 	UART4_Init();
+	//interrupt_Init();
 	BNO055_Init();
 	int total = 0;
+	int count = 0;
+	int state = 0;
 	while(1){
-		I2C_RequestRecieve(0xD , &input[0], 1);
-		I2C_RequestRecieve(0xC , &input[1], 1);
-		int16_t a = (int16_t)(((int16_t)(input[0]<<8)) | input[1]);
-		if(a>100){
-			total += a;
-		}else if(a>0){
-			if(total>0) total += a;
-		}else{
-			if(total > 500){
-				uint8_t str[5];
-				str[4] = total%10+'0';
-				total /= 10;
-				str[3] = total%10+'0';
-				total /= 10;
-				str[2] = total%10+'0';
-				total /= 10;
-				str[1] = total%10+'0';
-				total /= 10;
-				str[0] = total%10+'0';
-				total /= 10;
-				UART_Transmit(str, 5);
+		while(state == 0){
+			if((GPIOB->IDR & GPIO_IDR_ID13)==0){
+				//pushed
+				int delay = 50000;
+				while(delay--);
+				count++;
+				uint8_t str[5] = "GO!";
+				UART_Transmit(str, 3);
+				state = 1;
 			}
-			total = 0;
+		}
+		while(state == 1){
+			I2C_RequestRecieve(0xD , &input[0], 1);
+			I2C_RequestRecieve(0xC , &input[1], 1);
+			int16_t a = (int16_t)(((int16_t)(input[0]<<8)) | input[1]);
+			if(a>100){
+				total += a;
+			}else if(a>0){
+				if(total>0) total += a;
+			}else{
+				if(total > 500){
+					uint8_t str[5];
+					str[4] = total%10+'0';
+					total /= 10;
+					str[3] = total%10+'0';
+					total /= 10;
+					str[2] = total%10+'0';
+					total /= 10;
+					str[1] = total%10+'0';
+					total /= 10;
+					str[0] = total%10+'0';
+					total /= 10;
+					UART_Transmit(str, 5);
+					state = 0;
+				}
+				total = 0;
+			}
 		}
 	}
 }
