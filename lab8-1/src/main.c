@@ -46,8 +46,6 @@ void I2C1_Init(){
 }
 
 void I2C_Transmit(uint8_t reg ,uint8_t data) {
-	//I2C1->CR1 |= I2C_CR1_PE;
-
 	while(I2C1->ISR & I2C_ISR_BUSY);
 	I2C1->CR2 &= ~I2C_CR2_NBYTES;
 	I2C1->CR2 |= (I2C_CR2_NBYTES & (2<<16));
@@ -126,12 +124,31 @@ int main(){
 	I2C1_Init();
 	UART4_Init();
 	BNO055_Init();
+	int total = 0;
 	while(1){
 		I2C_RequestRecieve(0xD , &input[0], 1);
 		I2C_RequestRecieve(0xC , &input[1], 1);
 		int16_t a = (int16_t)(((int16_t)(input[0]<<8)) | input[1]);
-		//UART_Transmit(str, 1);
-		int delay = 50000;
-		while(delay--);
+		if(a>100){
+			total += a;
+		}else if(a>0){
+			if(total>0) total += a;
+		}else{
+			if(total > 500){
+				uint8_t str[5];
+				str[4] = total%10+'0';
+				total /= 10;
+				str[3] = total%10+'0';
+				total /= 10;
+				str[2] = total%10+'0';
+				total /= 10;
+				str[1] = total%10+'0';
+				total /= 10;
+				str[0] = total%10+'0';
+				total /= 10;
+				UART_Transmit(str, 5);
+			}
+			total = 0;
+		}
 	}
 }
