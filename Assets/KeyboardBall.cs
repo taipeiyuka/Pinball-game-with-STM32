@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class KeyboardBall : MonoBehaviour
 {
+    public Globals globe;
     // Start is called before the first frame update
     void Start()
     {
@@ -29,5 +30,9 @@ public class KeyboardBall : MonoBehaviour
         {
             gameObject.transform.position -= new Vector3(0, 0.1f, 0);
         }
+        else if (Input.GetKey(KeyCode.Space)) {
+            globe.now = Globals.OP.GAME_OVER;
+        }
+
     }
 }
