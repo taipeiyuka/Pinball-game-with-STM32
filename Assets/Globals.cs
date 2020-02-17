@@ -10,6 +10,7 @@ public class Globals : MonoBehaviour
 {
     public enum OP {
         WAIT_4_BUTTON,
+        WAIT_4_LIGHT,
         WAIT_4_VELOCITY,
         WAIT_4_END,
         GAME_OVER
@@ -17,7 +18,7 @@ public class Globals : MonoBehaviour
     public SerialPort mySerialPort;
     public string com = "COM4";
     public Rigidbody2D Go_ball;
-
+    public ScoreBoard score;
     public OP now;
     // Start is called before the first frame update
     void Start()
@@ -53,7 +54,9 @@ public class Globals : MonoBehaviour
             value = new string(val);
             if (string.Compare(value, "GOOOOO!") == 0)
             {
-                now = OP.WAIT_4_VELOCITY;
+                score.score--;
+                score.bet = 1;
+                now = OP.WAIT_4_LIGHT;
                 Debug.Log("Let's go!");
                 GameObject.FindGameObjectWithTag("ball").transform.position = new Vector3(4.23f, -4.7f, 0f);
             }
@@ -75,18 +78,33 @@ public class Globals : MonoBehaviour
                 v = float.Parse(value);
                 v /= 1000;
                 //Go_ball.AddForce(Vector3.up * v, ForceMode2D.Force);
-                if (v < 300)
+                if (v < 150)
                 {
                     Go_ball.AddForce(Vector3.up * v, ForceMode2D.Impulse);
                 }
                 now = OP.WAIT_4_END;
                 Debug.Log(v);
             }
+            else
+            {
+                if (score.score>0) {
+                    score.score--;
+                    score.bet++;
+                }
+            }
         }
         else if (now == OP.WAIT_4_END)
         {
             mySerialPort.Read(val, 0, 7);
             value = new string(val);
+            if (string.Compare(value, "GOOOOO!") == 0)
+            {
+                if (score.score > 0)
+                {
+                    score.score--;
+                    score.bet++;
+                }
+            }
         }
         else if (now == OP.GAME_OVER)
         {
@@ -94,7 +112,9 @@ public class Globals : MonoBehaviour
             value = new string(val);
             if (string.Compare(value, "GOOOOO!") == 0)
             {
-                now = OP.WAIT_4_VELOCITY;
+                score.score = 9;
+                score.bet = 1;
+                now = OP.WAIT_4_LIGHT;
                 Debug.Log("Let's go!");
                 GameObject.FindGameObjectWithTag("ball").transform.position = new Vector3(4.23f, -4.7f, 0f);
             }
